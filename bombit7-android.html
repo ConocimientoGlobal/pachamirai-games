@@ -1,1 +1,149 @@
-<!-- Bomb It 7 Android clone -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Bomb It 7 - Android Edition</title>
+  <style>
+    *{margin:0; padding:0; box-sizing:border-box}
+    body{background:#111; display:flex; flex-direction:column; align-items:center; font-family:monospace; color:#fff}
+    canvas{border:4px solid #00ff00; display:block; margin-top:8px}
+    .ui{display:flex; justify-content:center; gap:12px; margin:8px}
+    button{width:60px; height:60px; background:#0a0a0a; border:4px solid #00ff00; display:block; margin-top:8px}
+    .controls{position:fixed; bottom:10px; left:0; right:0; display:flex; justify-content:space-between; padding:0 10px}
+    .btn{width:60px; height:60px; background:#0a0a0a; border:4px solid #00ff00; font-size:12px; margin:5px}
+  </style>
+</head>
+<body>
+  <h1>Bomb It 7</h1>
+  <canvas id="gameCanvas" width="480" height="336"></canvas>
+  <div class="ui">
+    <button id="startBtn">Start</button>
+    <button id="pauseBtn">Pause</button>
+  </div>
+  <div class="controls">
+    <button class="btn" id="upBtn">↑</button>
+    <button class="btn" id="downBtn">↓</button>
+    <button class="btn" id="leftBtn">←</button>
+    <button class="btn" id="rightBtn">→</button>
+    <button class="btn" id="bombBtn">💣</button>
+  </div>
+
+  <script>
+    // Game logic in one file
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    
+    let gameRunning = false;
+    let players = [{x: 100, y: 100, vx: 0, vy: 0, color: '#00ff00', dir: 'right', id: 1}];
+    let bombs = [];
+    let explosions = [];
+    
+    const COLS = 15;
+    const ROWS = 11;
+    const TILE_SIZE = 32;
+    let grid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+    
+    function drawTile(x, y, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+      ctx.strokeStyle = '#333';
+      ctx.strokeRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    }
+    
+    function drawGrid() {
+      for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+          drawTile(x, y, '#222');
+        }
+      }
+    }
+    
+    function drawPlayer(p) {
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x, p.y, 20, 20);
+    }
+    
+    function drawBomb(b) {
+      ctx.fillStyle = '#ff0000';
+      ctx.fillRect(b.x, b.y, 15, 15);
+    }
+    
+    function drawExplosion(e) {
+      ctx.fillStyle = '#ffff00';
+      ctx.fillRect(e.x, e.y, 30, 30);
+    }
+    
+    function update() {
+      if (!gameRunning) return;
+      
+      for (let p of players) {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x <= 0 || p.x >= canvas.width - 20) p.vx = 0;
+        if (p.y <= 0 || p.y >= canvas.height - 20) p.vy = 0;
+      }
+      
+      for (let b of bombs) {
+        if (b.timer-- <= 0) {
+          b.active = false;
+          explosions.push({x: b.x, y: b.y, timer: 30});
+        }
+      }
+      
+      explosions = explosions.filter(e => {
+        e.timer--;
+        return e.timer > 0;
+      });
+    }
+    
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawGrid();
+      for (let p of players) drawPlayer(p);
+      for (let b of bombs) drawBomb(b);
+      for (let e of explosions) drawExplosion(e);
+    }
+    
+    function gameLoop() {
+      update();
+      render();
+      if (gameRunning) requestAnimationFrame(gameLoop);
+    }
+    
+    function handleInput() {
+      document.addEventListener('keydown', event => {
+        const key = event.key.toLowerCase();
+        if (key === 'w') { players[0].vy = -2; }
+        if (key === 's') { players[0].vy = 2; }
+        if (key === 'a') { players[0].vx = -2; }
+        if (key === 'd') { players[0].vx = 2; }
+        if (key === ' ') { 
+          bombs.push({x: players[0].x, y: players[0].y, timer: 60, active: true}); 
+        }
+      });
+    }
+    
+    startBtn.addEventListener('click', () => {
+      gameRunning = true;
+      gameLoop();
+      handleInput();
+    });
+    
+    pauseBtn.addEventListener('click', () => {
+      gameRunning = false;
+    });
+    
+    // Touch control
+    document.getElementById('upBtn').addEventListener('touchstart', () => players[0].vy = -2);
+    document.getElementById('downBtn').addEventListener('touchstart', () => players[0].vy = 2);
+    document.getElementById('leftBtn').addEventListener('touchstart', () => players[0].vx = -2);
+    document.getElementById('rightBtn').addEventListener('touchstart', () => players[0].vx = 2);
+    document.getElementById('bombBtn').addEventListener('touchstart', () => {
+      bombs.push({x: players[0].x, y: players[0].y, timer: 60, active: true});
+    });
+  </script>
+</body>
+</html>
